@@ -13,7 +13,7 @@ const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 let G,timer=null,uid=1,AC=null,SND=false;
 function sfx(t){if(!SND)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),n=AC.currentTime,f={ok:[660,880],bad:[140,90],click:[500,500],day:[392,523]}[t];o.type=t==='bad'?'sawtooth':'square';o.frequency.setValueAtTime(f[0],n);o.frequency.setValueAtTime(f[1],n+.08);g.gain.setValueAtTime(.05,n);g.gain.exponentialRampToValueAtTime(.001,n+.25);o.connect(g);g.connect(AC.destination);o.start();o.stop(n+.26)}catch(e){}}
 function fresh(){return{t:0,day:1,money:9000,ops:{inj:4,col:4,mon:4,qa:4,emb:4},staff:0,shift:{goal:500,good:0,produced:0,id:1,history:[]},rep:60,speed:0,prod:0,sent:0,won:false,over:false,
- raw:{resina:1800,vidro:1200,kit:1200,cola:1800,caixa:1800,espuma:1800,manta:900},hous:z(),glued:z(),asm:z(),qok:z(),pack:z(),scrap:0,recv:0,delivered:0,res:{},brand:{},hist:[],dayRev:0,dayExp:0,mdone:{},diff:1,tab:'fab',qa:[{p:null,t:0},{p:null,t:0}],mnt:[{p:null,t:0}],moi:[{p:null,t:0}],fer:[{p:null,t:0}],reb:0,recycled:0,mold:{car:0,bus:0,truck:0},amb:0,ref:0,brig:0,mult:0,ger:{prod:0,log:0,qual:0,man:0,cam:0,sc:0},moral:70,acc:0,ev:[],fx:{},visit:null,nextVisit:150,vlast:'',nfb:{ph:0,prog:0,run:false,done:false,contract:0},
+ raw:{resina:1800,vidro:1200,kit:1200,cola:1800,caixa:1800,espuma:1800,manta:900},hous:z(),glued:z(),asm:z(),qok:z(),pack:z(),scrap:0,recv:0,delivered:0,res:{},brand:{},hist:[],docRead:{},doc:'',dayRev:0,dayExp:0,mdone:{},diff:1,tab:'fab',qa:[{p:null,t:0},{p:null,t:0}],mnt:[{p:null,t:0}],moi:[{p:null,t:0}],fer:[{p:null,t:0}],reb:0,recycled:0,mold:{car:0,bus:0,truck:0},amb:0,ref:0,brig:0,mult:0,ger:{prod:0,log:0,qual:0,man:0,cam:0,sc:0},moral:70,acc:0,ev:[],fx:{},visit:null,nextVisit:150,vlast:'',nfb:{ph:0,prog:0,run:false,done:false,contract:0},
  inj:[{p:'auto',cur:null,prog:0,setup:0,rep:0,broken:false,st:'idle'},{p:'auto',cur:null,prog:0,setup:0,rep:0,broken:false,st:'idle'}],
  col:[{p:null,t:0},{p:null,t:0}],mon:[{p:null,t:0},{p:null,t:0}],emb:[{p:null,t:0},{p:null,t:0}],
  docks:1,dl:[],queue:[],unl:[],trucks:[{busy:0,ord:null},{busy:0,ord:null}],offers:[],orders:[],log:['Fábrica aberta. Aceite propostas e mantenha o estoque abastecido.']};}
@@ -78,7 +78,7 @@ function tick(){G.t++;receive();logistics();if(!(G.fx.blackout>G.t)){stage('emb'
 function pause(){G.speed=0;clearInterval(timer);timer=null}
 function setSpeed(s){G.speed=s;clearInterval(timer);timer=null;if(s>0)timer=setInterval(tick,1000/s)}
 function save(){try{localStorage.setItem('fabrica-retrovisores',JSON.stringify(G))}catch(e){}}
-function load(){try{const s=localStorage.getItem('fabrica-retrovisores');if(s){const g=JSON.parse(s);if(g&&g.inj&&g.qa&&g.hist&&g.nfb&&g.ger&&g.ger.sc!==undefined){g.ops=g.ops||{inj:4,col:4,mon:4,qa:4,emb:4};g.staff=g.staff||0;g.shift=g.shift||{goal:500,good:0,produced:0,id:1,history:[]};return g}}}catch(e){}return null}
+function load(){try{const s=localStorage.getItem('fabrica-retrovisores');if(s){const g=JSON.parse(s);if(g&&g.inj&&g.qa&&g.hist&&g.nfb&&g.ger&&g.ger.sc!==undefined){g.ops=g.ops||{inj:4,col:4,mon:4,qa:4,emb:4};g.staff=g.staff||0;g.shift=g.shift||{goal:500,good:0,produced:0,id:1,history:[]};g.docRead=g.docRead||{};g.doc=g.doc||'';return g}}}catch(e){}return null}
 const UP={mnt:{max:3,cost:n=>2000*n,arr:()=>G.mnt,add:()=>({p:null,t:0}),n:'estação de mantas'},moi:{max:3,cost:n=>2500*n,arr:()=>G.moi,add:()=>({p:null,t:0}),n:'moinho'},fer:{max:3,cost:n=>3500*n,arr:()=>G.fer,add:()=>({p:null,t:0}),n:'ferramenteiro'},qa:{max:4,cost:n=>2500*n,arr:()=>G.qa,add:()=>({p:null,t:0}),n:'posto de inspeção'},inj:{max:6,cost:n=>7000+2500*(n-2),arr:()=>G.inj,add:()=>({p:'auto',cur:null,prog:0,setup:0,rep:0,broken:false,st:'idle'}),n:'injetora'},
 col:{max:5,cost:n=>3000*n,arr:()=>G.col,add:()=>({p:null,t:0}),n:'estação de colagem'},
 mon:{max:5,cost:n=>3000*n,arr:()=>G.mon,add:()=>({p:null,t:0}),n:'bancada de montagem'},
@@ -87,7 +87,7 @@ dock:{max:3,cost:n=>3500*n,n:'doca de recebimento'},truck:{max:5,cost:n=>4500*n,
 const cnt=k=>k==='dock'?G.docks:k==='truck'?G.trucks.length:UP[k].arr().length;
 function A(act,a){
  if(act==='speed')return setSpeed(+a);
- if(act==='tab'){G.tab=a;return render()}
+ if(act==='tab'){G.tab=a;return render()}\n if(act==='docopen'){G.doc=a;return render()}\n if(act==='docback'){G.doc='';return render()}\n if(act==='docread'){G.docRead=G.docRead||{};G.docRead[a]=1;say('Documento consultado: '+(DOCS.find(d=>d.id===a)?.name||a)+'.');return render()}
  if(act==='goal'){G.shift.goal=Math.max(500,Math.min(5000,G.shift.goal+(+a)));say('Meta do turno ajustada para '+G.shift.goal+' peças.');return render()}
  if(act==='op'){const [k,delta]=a.split(':');if(+delta>0&&G.staff>0){G.ops[k]=(G.ops[k]||0)+1;G.staff--}else if(+delta<0&&(G.ops[k]||0)>0){G.ops[k]--;G.staff++}return render()}
  if(act==='hireOp'){if(G.money>=150){spend(150);G.staff++;say('Novo operador contratado e disponível para alocação.')}return render()}
@@ -235,7 +235,7 @@ CV.addEventListener('pointerleave',()=>{hov=-1});
 CV.addEventListener('pointerdown',e=>{const[x,y]=cvPos(e),h=hits.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(h){const m=G.inj[h.i];A(m.broken&&!m.rep?'repair':'cycle',h.i)}});
 
 /* ===== Abas, finanças, P&D, clientes, missões ===== */
-const TABS=[['fab','Fábrica'],['prod','Produção'],['pes','Pessoas'],['nfb','Projeto NFB'],['fin','Finanças'],['res','P&D'],['cli','Clientes']];
+const TABS=[['fab','Fábrica'],['prod','Produção'],['doc','Documentos'],['pes','Pessoas'],['nfb','Projeto NFB'],['fin','Finanças'],['res','P&D'],['cli','Clientes']];
 function finChart(H,fn){const W=640,Ht=190,L=46,B=24,mx=fn.max,mn=fn.min||0,y=v=>Ht-B-((v-mn)/(mx-mn))*(Ht-B-10);let s='<svg viewBox="0 0 '+W+' '+Ht+'" role="img" aria-label="'+fn.label+'">';
  for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4;s+='<line x1="'+L+'" x2="'+W+'" y1="'+y(v)+'" y2="'+y(v)+'" class="gr"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" class="ax">'+fm(v)+'</text>'}
  return s+fn.body(y,(W-L)/Math.max(H.length,1),L,Ht,B)+'</svg>'}
@@ -255,11 +255,50 @@ function cliPane(){const all=ALLCLI().concat(['VWCO · Projeto NFB']);
 function drawPanes(){
  if(!$('tabs').children.length)$('tabs').innerHTML=TABS.map(([k,n])=>'<button role="tab" data-act="tab" data-a="'+k+'">'+n+'</button>').join('');
  [...$('tabs').children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.a===G.tab)));
- TABS.forEach(([k])=>$('pane-'+k).hidden=G.tab!==k);if(G.tab==='prod')$('pane-prod').innerHTML=prodPane();
+ TABS.forEach(([k])=>$('pane-'+k).hidden=G.tab!==k);if(G.tab==='prod')$('pane-prod').innerHTML=prodPane();if(G.tab==='doc')$('pane-doc').innerHTML=docsPane();
  if(G.tab==='fin')$('pane-fin').innerHTML=finPane();else if(G.tab==='res')$('pane-res').innerHTML=resPane();else if(G.tab==='cli')$('pane-cli').innerHTML=cliPane();
  drawX();
  $('miss').innerHTML=M.map((m,i)=>'<div class="row"><span class="'+(G.mdone[i]?'good':'')+'">'+(G.mdone[i]?'✔ ':'○ ')+m.t+'</span><span class="mut num">'+R$(m.b)+'</span></div>').join('')}
 /* ===== Mantas, moinho, ferramentaria, pessoas, ocorrências, visitas e Projeto NFB ===== */
+
+const DOCS=[
+{id:'rvp',code:'DOC-OP-001',name:'RVP · Roteiro de Verificação do Processo',sector:'Todos os setores',rev:'03',purpose:'Padronizar as verificações básicas antes, durante e depois da produção.',sections:[
+['1. Antes de iniciar',['Confirmar código e revisão do produto na ordem de produção.','Verificar identificação da matéria-prima e situação de liberação.','Conferir limpeza, organização e condição segura do posto.','Confirmar que os documentos disponíveis correspondem ao produto em fabricação.']],
+['2. Durante o processo',['Observar parâmetros definidos na instrução de trabalho fictícia.','Separar imediatamente qualquer peça suspeita ou fora do padrão.','Registrar paradas, ajustes e desvios no apontamento do turno.']],
+['3. Ao finalizar',['Identificar e proteger o produto conforme o padrão de embalagem.','Registrar quantidade produzida, aprovada e segregada.','Comunicar anormalidades ao líder e à Qualidade.']]],
+note:'Material didático fictício. Em uma fábrica real, seguir sempre a documentação vigente e aprovada da unidade.'},
+{id:'controle',code:'DOC-QA-014',name:'Plano de Controle',sector:'Processo completo',rev:'02',purpose:'Definir o que verificar, como verificar e qual reação tomar diante de um desvio.',sections:[
+['Recebimento de componentes',[ 'Item: resina, espelho, adesivo, kit e embalagem.','Controle: identificação, lote, integridade e condição visual.','Frequência ilustrativa: cada lote recebido.','Reação: identificar, segregar e solicitar avaliação da Qualidade.']],
+['Injeção e acabamento',['Item: carcaça injetada.','Controle: aspecto visual, rebarba, trinca e deformação.','Frequência ilustrativa: primeira peça e amostras periódicas.','Reação: parar/segregar desde a última verificação conforme orientação do líder.']],
+['Colagem e montagem',['Item: conjunto colado e mecanismo montado.','Controle: posicionamento, limpeza, fixação e funcionamento.','Frequência ilustrativa: início de lote e amostragem durante o turno.','Reação: bloquear peças suspeitas e chamar o responsável do processo.']],
+['Inspeção final e embalagem',['Item: retrovisor acabado.','Controle: aparência, integridade, identificação e proteção.','Frequência ilustrativa: inspeção definida na ordem de produção.','Reação: não liberar produto não conforme.']]],
+note:'Valores, amostragens e critérios são exemplos de jogo, não especificações técnicas reais.'},
+{id:'operacao',code:'DOC-PR-008',name:'Plano de Operação',sector:'Linha de retrovisores',rev:'04',purpose:'Apresentar a sequência lógica de fabricação e os pontos de passagem entre operações.',sections:[
+['Sequência operacional',['10 · Recebimento e identificação dos materiais.','20 · Injeção da carcaça conforme ordem e molde liberado.','30 · Preparação e colagem do espelho.','40 · Montagem do mecanismo e componentes.','50 · Inspeção de qualidade do conjunto.','60 · Embalagem e identificação do produto acabado.','70 · Expedição conforme pedido liberado.']],
+['Regras de passagem',['Só encaminhar peças identificadas e liberadas.','Não misturar códigos, modelos ou lotes diferentes.','Manter quantidade e rastreabilidade entre operações.','Em caso de dúvida, interromper a movimentação e consultar a liderança.']]],
+note:'Sequência simplificada e fictícia para fins de simulação.'},
+{id:'it',code:'DOC-IT-021',name:'Instrução de Trabalho · Montagem',sector:'Montagem',rev:'01',purpose:'Orientar o operador na execução segura e padronizada da montagem.',sections:[
+['Preparação do posto',['Higienizar a bancada e retirar materiais de ordens anteriores.','Conferir componentes, código e quantidade da ordem.','Verificar ferramentas e dispositivos antes do uso.']],
+['Execução',['Posicionar a carcaça no dispositivo adequado.','Instalar os componentes previstos para a versão do produto.','Executar a fixação conforme orientação aprovada do processo.','Realizar a verificação funcional definida para a operação.']],
+['Cuidados e reação',['Não improvisar ferramentas ou alterar dispositivos.','Não utilizar componente danificado ou sem identificação.','Segregar a peça em caso de montagem incompleta ou funcionamento irregular.']]],
+note:'Instrução genérica fictícia. Não contém torque, força ou parâmetros reais de montagem.'},
+{id:'inspecao',code:'DOC-QA-022',name:'Ficha de Inspeção Final',sector:'Qualidade',rev:'02',purpose:'Registrar o resultado da avaliação do produto antes da liberação.',sections:[
+['Identificação do registro',['Data e turno: preencher no apontamento.','Produto / código: conforme ordem de produção.','Lote: conforme etiqueta de rastreabilidade.','Operador e inspetor: identificação funcional.']],
+['Itens de verificação',['Aparência: sem riscos, trincas ou danos aparentes.','Espelho: íntegro e corretamente posicionado.','Mecanismo: funcionamento conforme padrão aplicável.','Acabamento: sem rebarbas ou contaminação visível.','Embalagem: proteção e identificação corretas.']],
+['Resultado',['Aprovado: liberar conforme fluxo do processo.','Reprovado: identificar, segregar e registrar o defeito.','Dúvida: manter bloqueado até avaliação da Qualidade.']]],
+note:'Registro ilustrativo. Os critérios de aceitação reais devem vir da engenharia e da qualidade.'},
+{id:'setup',code:'DOC-SEG-005',name:'Checklist de Segurança e Setup',sector:'Injeção e postos produtivos',rev:'01',purpose:'Lembrar as verificações essenciais de segurança e preparação antes de operar.',sections:[
+['Segurança',['Usar os EPIs definidos para a atividade.','Manter proteções e dispositivos de segurança instalados.','Não acessar zonas de risco com equipamento em movimento.','Comunicar ruídos, vazamentos ou falhas imediatamente.']],
+['Setup e liberação',['Conferir ordem, produto e molde/dispositivo previsto.','Verificar limpeza e condição geral do equipamento.','Confirmar parâmetros com a pessoa autorizada.','Realizar primeira peça e solicitar validação quando aplicável.']],
+['Se houver anormalidade',['Parar a operação de forma segura.','Identificar e proteger o material em processo.','Acionar liderança ou manutenção.','Retomar somente após liberação.']]],
+note:'Checklist fictício. Nunca substitui treinamento, análise de risco ou procedimento oficial de segurança.'}
+];
+function docsPane(){
+ const selected=DOCS.find(d=>d.id===G.doc),read=G.docRead||{},count=DOCS.filter(d=>read[d.id]).length;
+ if(selected)return '<div class="box"><h2>Central de documentos · '+selected.code+'</h2><div><div class="row"><span class="chip">'+selected.sector+'</span><span class="mut">Revisão '+selected.rev+' · Modelo fictício</span></div><h2 style="font:700 24px var(--f-d);border:0;padding:8px 0">'+selected.name+'</h2><p class="mut">'+selected.purpose+'</p>'+selected.sections.map(sec=>'<div class="ord"><h3>'+sec[0]+'</h3><ul style="margin:0;padding-left:20px">'+sec[1].map(x=>'<li style="margin:5px 0">'+x+'</li>').join('')+'</ul></div>').join('')+'<div class="mut">'+selected.note+'</div><div class="chips">'+btn('docback',0,'← Voltar aos documentos',0,'sm')+' '+btn('docread',selected.id,read[selected.id]?'✓ Documento consultado':'Marcar como consultado',0,'sm pri')+'</div></div></div>';
+ return '<div class="box"><h2>Central de documentos da produção</h2><div><p class="mut">Biblioteca de documentos simulados para treinamento dos operadores. Consulte os padrões antes de iniciar cada etapa. Os documentos são fictícios e não representam procedimentos oficiais de nenhuma empresa.</p><div class="kp"><div class="kpi"><b class="num">'+count+'/'+DOCS.length+'</b><span>Documentos consultados</span></div><div class="kpi"><b class="num">'+DOCS.length+'</b><span>Modelos disponíveis</span></div></div><div class="bar"><i style="width:'+(100*count/DOCS.length)+'%"></i></div></div></div><div class="grid2">'+DOCS.map(d=>'<div class="ord"><div class="row"><span class="chip">'+d.code+'</span><span class="mut">Rev. '+d.rev+'</span></div><h3>'+d.name+'</h3><div class="mut">'+d.sector+' · '+d.purpose+'</div><div class="row"><span class="'+(read[d.id]?'good':'mut')+'">'+(read[d.id]?'✓ Consultado':'Não consultado')+'</span>'+btn('docopen',d.id,'Abrir documento',0,'sm pri')+'</div></div>').join('')+'</div><div class="box"><h2>Orientação ao operador</h2><div class="mut">Em caso de divergência entre documentos, ordem de produção ou condição encontrada no posto, não improvisar. Segregar o produto quando necessário e procurar a liderança ou a Qualidade.</div></div>';
+}
+
 function prodPane(){
  const names={inj:'Injeção',col:'Colagem',mon:'Montagem',qa:'Qualidade',emb:'Embalagem'},stations={inj:G.inj.length,col:G.col.length,mon:G.mon.length,qa:G.qa.length,emb:G.emb.length},items=Object.keys(names);
  const line=items.map((k,i)=>{const factor=opFactor(k),cap=Math.round(RATE.car*stations[k]*DAY*factor),stock=k==='inj'?G.hous.car:k==='col'?G.glued.car:k==='mon'?G.asm.car:k==='qa'?G.qok.car:G.pack.car;return '<div class="ord"><div class="row"><h3>'+(i+1)+'. '+names[k]+'</h3><span class="chip">'+Math.round(factor*100)+'% capacidade</span></div><div class="mut">'+stations[k]+' estações · '+G.ops[k]+' operadores · capacidade estimada '+cap.toLocaleString('pt-BR')+' peças/dia</div><div class="row"><span class="mut">Operadores</span><b class="num">'+G.ops[k]+'</b></div><div class="chips">'+btn('op',k+':-1','−',G.ops[k]<=0,'sm')+btn('op',k+':1','+ operador',G.staff<=0,'sm')+'</div><div class="mut">Peças acumuladas na saída: <b class="num">'+sh(stock)+'</b></div></div>'}).join('');
