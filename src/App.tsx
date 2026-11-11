@@ -138,7 +138,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;
     <div id="pane-fab" class="vs"><div class="plant"><h2>Planta da fábrica ao vivo<small>clique numa injetora para trocar o molde ou chamar a manutenção</small></h2><canvas id="cv" role="img" aria-label="Planta animada da fábrica"></canvas></div>
     <div class="mut">Capacidade base por estação: Carro 1.020 por dia · Ônibus 240 por dia · Caminhão 300 por dia (36 por hora). P&D e gerentes aumentam esses números.</div>
     <section id="floor" aria-label="Painéis dos setores"></section></div>
-    <div id="pane-prod" class="vs" hidden></div><div id="pane-pes" class="vs" hidden></div><div id="pane-nfb" class="vs" hidden></div><div id="pane-fin" class="vs" hidden></div><div id="pane-res" class="vs" hidden></div><div id="pane-cli" class="vs" hidden></div></div>
+    <div id="pane-prod" class="vs" hidden></div><div id="pane-doc" class="vs" hidden></div><div id="pane-pes" class="vs" hidden></div><div id="pane-nfb" class="vs" hidden></div><div id="pane-fin" class="vs" hidden></div><div id="pane-res" class="vs" hidden></div><div id="pane-cli" class="vs" hidden></div></div>
   <aside>
     <div class="box"><h2>Ocorrências nas linhas</h2><div id="evs"></div></div>
     <div class="box"><h2>Agenda de visitas</h2><div id="vis"></div></div>
