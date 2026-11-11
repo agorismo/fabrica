@@ -87,7 +87,8 @@ dock:{max:3,cost:n=>3500*n,n:'doca de recebimento'},truck:{max:5,cost:n=>4500*n,
 const cnt=k=>k==='dock'?G.docks:k==='truck'?G.trucks.length:UP[k].arr().length;
 function A(act,a){
  if(act==='speed')return setSpeed(+a);
- if(act==='tab'){G.tab=a;return render()}\n if(act==='docopen'){G.doc=a;return render()}
+ if(act==='tab'){G.tab=a;return render()}
+ if(act==='docopen'){G.doc=a;return render()}
  if(act==='docback'){G.doc='';return render()}
  if(act==='docread'){G.docRead=G.docRead||{};G.docRead[a]=1;say('Documento consultado: '+(DOCS.find(d=>d.id===a)?.name||a)+'.');return render()}
  if(act==='goal'){G.shift.goal=Math.max(500,Math.min(5000,G.shift.goal+(+a)));say('Meta do turno ajustada para '+G.shift.goal+' peças.');return render()}
