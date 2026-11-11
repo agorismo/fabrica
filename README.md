@@ -1,35 +1,20 @@
 # Fábrica de Retrovisores
 
-Jogo de gerenciamento industrial em React + TypeScript, com Vite.
+Versão atualizada migrada para uma estrutura React + TypeScript + Vite.
 
-## Rodar localmente
-
+## Desenvolvimento
 ```bash
 npm install
 npm run dev
 ```
 
-## Gerar versão de produção
-
+## Build
 ```bash
 npm run build
 npm run preview
 ```
 
-## Publicar no GitHub Pages
+## GitHub Pages
+Envie o conteúdo para a branch `main` e configure **Settings → Pages → Source → GitHub Actions**. O workflow em `.github/workflows/deploy.yml` compila o Vite e publica `dist`.
 
-1. Envie os arquivos deste projeto para a branch `main` do repositório.
-2. No GitHub, abra **Settings → Pages**.
-3. Em **Build and deployment**, selecione **GitHub Actions**.
-4. Faça um `push` na branch `main` (ou execute o workflow manualmente em **Actions**).
-5. Aguarde o workflow **Deploy to GitHub Pages** terminar. O endereço aparecerá no ambiente `github-pages`.
-
-O Vite está configurado com `base: "./"` para funcionar tanto em repositórios de projeto quanto em domínios próprios.
-
-## Estrutura
-
-- `src/App.tsx`: ponto de montagem React.
-- `src/main.tsx`: inicialização da aplicação.
-- `src/game.ts`: motor e regras da simulação.
-- `src/style.css`: estilos da fábrica.
-- `.github/workflows/deploy.yml`: build e publicação automática.
+O motor original foi preservado em `src/game.ts` e inicializado depois que o HTML da interface é montado. Essa etapa prioriza manter a simulação atualizada funcionando; a refatoração completa dos sistemas em componentes React nativos pode ser feita gradualmente.
