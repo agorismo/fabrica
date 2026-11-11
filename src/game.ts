@@ -12,7 +12,7 @@ const z=()=>({car:0,bus:0,truck:0});
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 let G,timer=null,uid=1,AC=null,SND=false;
 function sfx(t){if(!SND)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),n=AC.currentTime,f={ok:[660,880],bad:[140,90],click:[500,500],day:[392,523]}[t];o.type=t==='bad'?'sawtooth':'square';o.frequency.setValueAtTime(f[0],n);o.frequency.setValueAtTime(f[1],n+.08);g.gain.setValueAtTime(.05,n);g.gain.exponentialRampToValueAtTime(.001,n+.25);o.connect(g);g.connect(AC.destination);o.start();o.stop(n+.26)}catch(e){}}
-function fresh(){return{t:0,day:1,money:9000,rep:60,speed:0,prod:0,sent:0,won:false,over:false,
+function fresh(){return{t:0,day:1,money:9000,ops:{inj:4,col:4,mon:4,qa:4,emb:4},staff:0,shift:{goal:500,good:0,produced:0,id:1,history:[]},rep:60,speed:0,prod:0,sent:0,won:false,over:false,
  raw:{resina:1800,vidro:1200,kit:1200,cola:1800,caixa:1800,espuma:1800,manta:900},hous:z(),glued:z(),asm:z(),qok:z(),pack:z(),scrap:0,recv:0,delivered:0,res:{},brand:{},hist:[],dayRev:0,dayExp:0,mdone:{},diff:1,tab:'fab',qa:[{p:null,t:0},{p:null,t:0}],mnt:[{p:null,t:0}],moi:[{p:null,t:0}],fer:[{p:null,t:0}],reb:0,recycled:0,mold:{car:0,bus:0,truck:0},amb:0,ref:0,brig:0,mult:0,ger:{prod:0,log:0,qual:0,man:0,cam:0,sc:0},moral:70,acc:0,ev:[],fx:{},visit:null,nextVisit:150,vlast:'',nfb:{ph:0,prog:0,run:false,done:false,contract:0},
  inj:[{p:'auto',cur:null,prog:0,setup:0,rep:0,broken:false,st:'idle'},{p:'auto',cur:null,prog:0,setup:0,rep:0,broken:false,st:'idle'}],
  col:[{p:null,t:0},{p:null,t:0}],mon:[{p:null,t:0},{p:null,t:0}],emb:[{p:null,t:0},{p:null,t:0}],
@@ -26,7 +26,8 @@ const RATE={car:17,bus:4,truck:5},RB=1800,K=30;
 const sh=n=>n>=1000?(n/1000).toFixed(1).replace('.',',')+'k':String(Math.round(n));
 const tm=n=>{const m=Math.round(n*8.33);return m>=60?Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':''):m+' min'};
 const fm=v=>{v*=K;return Math.abs(v)>=1e6?(v/1e6).toFixed(1).replace('.',',')+' mi':Math.abs(v)>=1000?Math.round(v/1000)+' mil':String(Math.round(v))};
-function stR(k,p){return RATE[p]*(p==='truck'&&G.ger.cam?1.15:1)*(k==='col'&&G.res.cura?1.25:1)*(k==='col'&&G.fx.colSlow>G.t?.8:1)*(k==='emb'&&G.res.auto?1.3:1)}
+function opFactor(k){const stations={inj:G.inj.length,col:G.col.length,mon:G.mon.length,qa:G.qa.length,emb:G.emb.length}[k]||1;return Math.min(1.35,.65+(G.ops?.[k]||0)/Math.max(1,stations*2)*.35)}
+function stR(k,p){return RATE[p]*(p==='truck'&&G.ger.cam?1.15:1)*(k==='col'&&G.res.cura?1.25:1)*(k==='col'&&G.fx.colSlow>G.t?.8:1)*(k==='emb'&&G.res.auto?1.3:1)*(G.fx.lineSlow>G.t?.65:1)}
 function inject(){G.inj.forEach(m=>{
  if(m.broken){if(m.rep>0&&--m.rep===0){m.broken=false;say('Injetora reparada.')}m.st='broken';m.prog=0;return}
  if(m.setup>0){m.setup--;m.st='setup';m.prog=0;return}
@@ -34,7 +35,7 @@ function inject(){G.inj.forEach(m=>{
  if(!p){m.st='idle';m.prog=0;return}
  if(m.cur&&m.cur!==p){m.cur=p;m.setup=G.res.molde?1:3;m.st='setup';m.prog=0;say('Troca de molde: '+PR[p].n+'.');return}
  m.cur=p;
- const n=Math.min(Math.floor(stR('inj',p)),Math.floor(G.raw.resina/PR[p].res));
+ const n=Math.min(Math.floor(stR('inj',p)*opFactor('inj')),Math.floor(G.raw.resina/PR[p].res));
  if(n<=0||G.reb>=RB||G.mold[p]>=100||G.fx.blackout>G.t){m.st='nomat';m.prog=0;return}
  G.raw.resina-=n*PR[p].res;G.hous[p]+=n;G.prod+=n;G.reb=Math.min(RB*1.3,G.reb+n*PR[p].res*.4);G.mold[p]=Math.min(100,G.mold[p]+n*.02);m.st='run';m.prog=n;
  if(Math.random()<brk()){m.broken=true;m.prog=0;m.st='broken';say('Injetora parou: falha no sistema de aquecimento.');sfx('bad')}})}
@@ -43,12 +44,12 @@ function stage(k){const d=SEC[k];G[k].forEach(s=>{
  let tl=1,tot=0,main=null,anyIn=false;
  const ord=KEYS.slice().sort((a,b)=>deficit(b)-deficit(a)||G[d.inn][b]-G[d.inn][a]);
  for(const p of ord){if(tl<=.001)break;if(G[d.inn][p]<=0)continue;anyIn=true;
-  const mt=d.mats(p),r=stR(k,p);let n=Math.min(Math.floor(tl*r),G[d.inn][p]);
+  const mt=d.mats(p),r=stR(k,p)*opFactor(k);let n=Math.min(Math.floor(tl*r),G[d.inn][p]);
   for(const m in mt)n=Math.min(n,Math.floor(G.raw[m]/mt[m]));
   if(n<=0)continue;
   G[d.inn][p]-=n;for(const m in mt)G.raw[m]-=n*mt[m];
   let ok=n;if(k==='qa'){const sc=Math.min(n,Math.max(0,Math.round(n*scrapRate()+(Math.random()-.5))));ok=n-sc;G.scrap+=sc;if(G.scrap-(G.scrapSay||0)>=60){G.scrapSay=G.scrap;say('Inspeção de qualidade: '+G.scrap+' peças refugadas até agora.')}}
-  G[d.out][p]+=ok;tl-=n/r;tot+=n;main=main||p}
+  G[d.out][p]+=ok;if(k==='qa'){G.shift.good+=ok;G.shift.produced+=n}tl-=n/r;tot+=n;main=main||p}
  s.p=main;s.n=tot;s.u=1-Math.max(0,tl);s.why=tot?'run':anyIn?'nomat':'noin'})}
 function receive(){
  G.dl.forEach(d=>d.eta--);
@@ -72,11 +73,12 @@ function endDay(){
  spend(c);say('Dia '+G.day+' encerrado. Folha e despesas: '+R$(c)+'.');G.hist.push({d:G.day,m:G.money,r:G.dayRev,e:G.dayExp});if(G.hist.length>60)G.hist.shift();G.dayRev=0;G.dayExp=0;G.day++;sfx("day");
  if(G.money<-3000&&!G.over){G.over=true;pause();modal('lose')}
  else if(G.money>=GOAL&&!G.won){G.won=true;pause();modal('win')}}
-function tick(){G.t++;receive();logistics();if(!(G.fx.blackout>G.t)){stage('emb');stage('qa');stage('mon');stage('col');inject()}market();checkM();extra();if(G.t%DAY===0)endDay();render();if(G.t%10===0)save()}
+function closeShift(){const sh=G.shift,rate=sh.goal?Math.min(150,sh.good/sh.goal*100):0;sh.history.push({id:sh.id,good:sh.good,goal:sh.goal,rate});if(sh.history.length>9)sh.history.shift();say('Turno '+sh.id+' encerrado: '+sh.good+'/'+sh.goal+' peças aprovadas ('+Math.round(rate)+'%).');if(rate>=100){G.rep=Math.min(100,G.rep+1);G.moral=Math.min(100,G.moral+2)}else if(rate<60)G.moral=Math.max(0,G.moral-2);sh.good=0;sh.produced=0;sh.id=sh.id%3+1}
+function tick(){G.t++;receive();logistics();if(!(G.fx.blackout>G.t)){stage('emb');stage('qa');stage('mon');stage('col');inject()}market();checkM();extra();if(G.t%20===0)closeShift();if(G.t%DAY===0)endDay();render();if(G.t%10===0)save()}
 function pause(){G.speed=0;clearInterval(timer);timer=null}
 function setSpeed(s){G.speed=s;clearInterval(timer);timer=null;if(s>0)timer=setInterval(tick,1000/s)}
 function save(){try{localStorage.setItem('fabrica-retrovisores',JSON.stringify(G))}catch(e){}}
-function load(){try{const s=localStorage.getItem('fabrica-retrovisores');if(s){const g=JSON.parse(s);if(g&&g.inj&&g.qa&&g.hist&&g.nfb&&g.ger&&g.ger.sc!==undefined)return g}}catch(e){}return null}
+function load(){try{const s=localStorage.getItem('fabrica-retrovisores');if(s){const g=JSON.parse(s);if(g&&g.inj&&g.qa&&g.hist&&g.nfb&&g.ger&&g.ger.sc!==undefined){g.ops=g.ops||{inj:4,col:4,mon:4,qa:4,emb:4};g.staff=g.staff||0;g.shift=g.shift||{goal:500,good:0,produced:0,id:1,history:[]};return g}}}catch(e){}return null}
 const UP={mnt:{max:3,cost:n=>2000*n,arr:()=>G.mnt,add:()=>({p:null,t:0}),n:'estação de mantas'},moi:{max:3,cost:n=>2500*n,arr:()=>G.moi,add:()=>({p:null,t:0}),n:'moinho'},fer:{max:3,cost:n=>3500*n,arr:()=>G.fer,add:()=>({p:null,t:0}),n:'ferramenteiro'},qa:{max:4,cost:n=>2500*n,arr:()=>G.qa,add:()=>({p:null,t:0}),n:'posto de inspeção'},inj:{max:6,cost:n=>7000+2500*(n-2),arr:()=>G.inj,add:()=>({p:'auto',cur:null,prog:0,setup:0,rep:0,broken:false,st:'idle'}),n:'injetora'},
 col:{max:5,cost:n=>3000*n,arr:()=>G.col,add:()=>({p:null,t:0}),n:'estação de colagem'},
 mon:{max:5,cost:n=>3000*n,arr:()=>G.mon,add:()=>({p:null,t:0}),n:'bancada de montagem'},
@@ -86,6 +88,9 @@ const cnt=k=>k==='dock'?G.docks:k==='truck'?G.trucks.length:UP[k].arr().length;
 function A(act,a){
  if(act==='speed')return setSpeed(+a);
  if(act==='tab'){G.tab=a;return render()}
+ if(act==='goal'){G.shift.goal=Math.max(500,Math.min(5000,G.shift.goal+(+a)));say('Meta do turno ajustada para '+G.shift.goal+' peças.');return render()}
+ if(act==='op'){const [k,delta]=a.split(':');if(+delta>0&&G.staff>0){G.ops[k]=(G.ops[k]||0)+1;G.staff--}else if(+delta<0&&(G.ops[k]||0)>0){G.ops[k]--;G.staff++}return render()}
+ if(act==='hireOp'){if(G.money>=150){spend(150);G.staff++;say('Novo operador contratado e disponível para alocação.')}return render()}
  if(act==='diff'){G.diff=+a;G.money=[12000,9000,6000][+a];document.querySelectorAll('[data-act=diff]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.a===a)));return render()}
  if(act==='snd'){SND=!SND;sfx('click');return render()}
  if(['buy','up','accept','ship','repair','res','hire','ev','prep','drill','nfb'].includes(act))sfx('click');
@@ -230,7 +235,7 @@ CV.addEventListener('pointerleave',()=>{hov=-1});
 CV.addEventListener('pointerdown',e=>{const[x,y]=cvPos(e),h=hits.find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(h){const m=G.inj[h.i];A(m.broken&&!m.rep?'repair':'cycle',h.i)}});
 
 /* ===== Abas, finanças, P&D, clientes, missões ===== */
-const TABS=[['fab','Fábrica'],['pes','Pessoas'],['nfb','Projeto NFB'],['fin','Finanças'],['res','P&D'],['cli','Clientes']];
+const TABS=[['fab','Fábrica'],['prod','Produção'],['pes','Pessoas'],['nfb','Projeto NFB'],['fin','Finanças'],['res','P&D'],['cli','Clientes']];
 function finChart(H,fn){const W=640,Ht=190,L=46,B=24,mx=fn.max,mn=fn.min||0,y=v=>Ht-B-((v-mn)/(mx-mn))*(Ht-B-10);let s='<svg viewBox="0 0 '+W+' '+Ht+'" role="img" aria-label="'+fn.label+'">';
  for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4;s+='<line x1="'+L+'" x2="'+W+'" y1="'+y(v)+'" y2="'+y(v)+'" class="gr"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" class="ax">'+fm(v)+'</text>'}
  return s+fn.body(y,(W-L)/Math.max(H.length,1),L,Ht,B)+'</svg>'}
@@ -250,23 +255,29 @@ function cliPane(){const all=ALLCLI().concat(['VWCO · Projeto NFB']);
 function drawPanes(){
  if(!$('tabs').children.length)$('tabs').innerHTML=TABS.map(([k,n])=>'<button role="tab" data-act="tab" data-a="'+k+'">'+n+'</button>').join('');
  [...$('tabs').children].forEach(b=>b.setAttribute('aria-selected',String(b.dataset.a===G.tab)));
- TABS.forEach(([k])=>$('pane-'+k).hidden=G.tab!==k);
+ TABS.forEach(([k])=>$('pane-'+k).hidden=G.tab!==k);if(G.tab==='prod')$('pane-prod').innerHTML=prodPane();
  if(G.tab==='fin')$('pane-fin').innerHTML=finPane();else if(G.tab==='res')$('pane-res').innerHTML=resPane();else if(G.tab==='cli')$('pane-cli').innerHTML=cliPane();
  drawX();
  $('miss').innerHTML=M.map((m,i)=>'<div class="row"><span class="'+(G.mdone[i]?'good':'')+'">'+(G.mdone[i]?'✔ ':'○ ')+m.t+'</span><span class="mut num">'+R$(m.b)+'</span></div>').join('')}
 /* ===== Mantas, moinho, ferramentaria, pessoas, ocorrências, visitas e Projeto NFB ===== */
+function prodPane(){
+ const names={inj:'Injeção',col:'Colagem',mon:'Montagem',qa:'Qualidade',emb:'Embalagem'},stations={inj:G.inj.length,col:G.col.length,mon:G.mon.length,qa:G.qa.length,emb:G.emb.length},items=Object.keys(names);
+ const line=items.map((k,i)=>{const factor=opFactor(k),cap=Math.round(RATE.car*stations[k]*DAY*factor),stock=k==='inj'?G.hous.car:k==='col'?G.glued.car:k==='mon'?G.asm.car:k==='qa'?G.qok.car:G.pack.car;return '<div class="ord"><div class="row"><h3>'+(i+1)+'. '+names[k]+'</h3><span class="chip">'+Math.round(factor*100)+'% capacidade</span></div><div class="mut">'+stations[k]+' estações · '+G.ops[k]+' operadores · capacidade estimada '+cap.toLocaleString('pt-BR')+' peças/dia</div><div class="row"><span class="mut">Operadores</span><b class="num">'+G.ops[k]+'</b></div><div class="chips">'+btn('op',k+':-1','−',G.ops[k]<=0,'sm')+btn('op',k+':1','+ operador',G.staff<=0,'sm')+'</div><div class="mut">Peças acumuladas na saída: <b class="num">'+sh(stock)+'</b></div></div>'}).join('');
+ const shf=G.shift,rate=shf.goal?Math.min(150,shf.good/shf.goal*100):0,total=items.reduce((a,k)=>a+G.ops[k],0);
+ return '<div class="box"><h2>Controle do turno '+shf.id+'/3</h2><div class="kp"><div class="kpi"><b class="num">'+shf.good.toLocaleString('pt-BR')+'</b><span>Peças aprovadas</span></div><div class="kpi"><b class="num">'+shf.goal.toLocaleString('pt-BR')+'</b><span>Meta do turno</span></div><div class="kpi"><b class="num">'+Math.round(rate)+'%</b><span>Atingimento</span></div><div class="kpi"><b class="num">'+shf.produced.toLocaleString('pt-BR')+'</b><span>Inspecionadas</span></div></div><div class="bar"><i style="width:'+Math.min(100,rate)+'%"></i></div><div class="row"><span class="mut">Ajustar meta por turno</span><span>'+btn('goal',-500,'− 500',shf.goal<=500,'sm')+' '+btn('goal',500,'+ 500',shf.goal>=5000,'sm')+'</span></div></div><div class="box"><h2>Linha integrada · fluxo de produção</h2><div class="grid2">'+line+'</div><div class="mut">Fluxo: Injeção → Colagem → Montagem → Qualidade → Embalagem. Cada etapa consome a saída da anterior; falta de peças ou capacidade insuficiente cria gargalos.</div></div><div class="box"><h2>Equipe operacional</h2><div class="row"><span>Operadores alocados</span><b class="num">'+total+'</b></div><div class="row"><span>Operadores disponíveis</span><b class="num">'+G.staff+'</b></div><div class="row"><span>Contratar operador</span>'+btn('hireOp',0,'Contratar · '+R$(150),G.money<150,'sm pri')+'</div><div class="mut">Cada operador custa R$ 90 por dia. Alocar operadores melhora a capacidade da etapa; retirar um operador devolve-o ao quadro disponível.</div></div><div class="box"><h2>Histórico dos turnos</h2><div class="tw"><table><thead><tr><th>Turno</th><th>Aprovadas</th><th>Meta</th><th>Atingimento</th></tr></thead><tbody>'+(shf.history.length?shf.history.slice().reverse().map(x=>'<tr><td>'+x.id+'</td><td class="num">'+x.good+'</td><td class="num">'+x.goal+'</td><td class="num">'+Math.round(x.rate)+'%</td></tr>').join(''):'<tr><td colspan="4" class="mut">O primeiro turno ainda está em andamento.</td></tr>')+'</tbody></table></div></div>'}
 const mxMold=()=>Math.max(...KEYS.map(p=>G.mold[p]));
 const worstMold=()=>KEYS.slice().sort((a,b)=>G.mold[b]-G.mold[a])[0];
 const EV=[
+{k:'esteira',t:'Esteira de transferência travada',d:'Uma esteira entre setores parou. A linha continua, mas com fluxo reduzido até a manutenção agir.',o:[{l:'Manutenção corretiva · R$ 7.500',c:250,f:()=>{G.fx.lineSlow=0}},{l:'Operar em velocidade reduzida',f:()=>{G.fx.lineSlow=G.t+30}}],ig:()=>{G.fx.lineSlow=G.t+40}},
 {k:'resina',t:'Resina contaminada',d:'O recebimento achou umidade no último lote de resina.',o:[{l:'Descartar 30 kg de resina',f:()=>{G.raw.resina=Math.max(0,G.raw.resina-30)}},{l:'Usar assim mesmo',f:()=>{G.fx.scrapUp=G.t+40}}],ig:()=>{G.fx.scrapUp=G.t+40}},
 {k:'sensor',t:'Sensor de cola desregulado',d:'A dosadora da colagem está errando a quantidade de adesivo.',o:[{l:'Chamar a manutenção · R$ 9.000',c:300,f:()=>{}},{l:'Seguir com ajuste manual',f:()=>{G.fx.colSlow=G.t+30}}],ig:()=>{G.fx.colSlow=G.t+30}},
 {k:'energia',t:'Queda de energia na linha',d:'O disjuntor geral desarmou na injeção.',o:[{l:'Acionar o gerador · R$ 12.000',c:400,f:()=>{}},{l:'Aguardar a concessionária',f:()=>{G.fx.blackout=G.t+8}}],ig:()=>{G.fx.blackout=G.t+8}},
 {k:'cliente',t:'Reclamação de cliente',d:'Uma montadora reportou retrovisores riscados no último lote.',o:[{l:'Abrir relatório 8D · R$ 15.000',c:500,f:()=>{G.rep=Math.min(100,G.rep+2)}},{l:'Ignorar',f:()=>{G.rep=Math.max(0,G.rep-4)}}],ig:()=>{G.rep=Math.max(0,G.rep-6)}},
 {k:'forn',t:'Atraso de fornecedor',d:'O transportador avisou que as cargas de material vão atrasar.',o:[{l:'Pagar frete expresso · R$ 10.500',c:350,f:()=>{}},{l:'Aguardar',f:()=>{G.dl.forEach(d=>d.eta+=8)}}],ig:()=>{G.dl.forEach(d=>d.eta+=10)}},
 {k:'molde',t:'Molde com rebarba',d:'A ferramentaria encontrou desgaste anormal em um molde.',o:[{l:'Retificar o molde · R$ 18.000',c:600,f:()=>{G.mold[worstMold()]=0}},{l:'Produzir assim mesmo',f:()=>{G.mold[worstMold()]=Math.min(99,G.mold[worstMold()]+15)}}],ig:()=>{G.mold[worstMold()]=Math.min(99,G.mold[worstMold()]+20)}}];
-const evD=k=>EV.find(e=>e.k===k),AUTO={sensor:'man',energia:'man',molde:'man',cliente:'qual',resina:'qual',forn:'sc'};
+const evD=k=>EV.find(e=>e.k===k),AUTO={esteira:'man',sensor:'man',energia:'man',molde:'man',cliente:'qual',resina:'qual',forn:'sc'};
 function resolveEv(id,o){const i=G.ev.findIndex(x=>x.id===id);if(i<0)return;const e=G.ev[i],d=evD(e.k),op=d.o[o];if(!op||(op.c&&G.money<op.c))return;if(op.c)spend(op.c);op.f();G.ev.splice(i,1);say('Ocorrência resolvida: '+d.t+' ('+op.l.split(' · ')[0]+').')}
-const staffCost=()=>250*Object.values(G.ger).reduce((a,b)=>a+b,0)+60*G.brig+120*G.mult+150*G.amb+120*G.ref;
+const staffCost=()=>250*Object.values(G.ger).reduce((a,b)=>a+b,0)+60*G.brig+120*G.mult+150*G.amb+120*G.ref+3*Object.values(G.ops||{}).reduce((a,b)=>a+b,0);
 const NFB=[{n:'Engenharia e design do retrovisor',need:120,cost:8000,d:'A engenharia valida os desenhos do retrovisor para a nova geração de cabines da VWCO.'},
 {n:'Ferramental do molde',need:150,cost:6000,d:'Ocupa uma ferramentaria dedicada. Com apenas uma, a manutenção dos moldes da fábrica para.'},
 {n:'Protótipos e validação',need:60,cost:2000,deliver:50,d:'Consome 50 retrovisores de caminhão embalados, enviados aos testes da VWCO.'},
@@ -325,7 +336,7 @@ function nfbPane(){const n=G.nfb;
 function drawX(){
  $('evs').innerHTML=G.ev.length?G.ev.map(x=>{const d=evD(x.k);return '<div class="ord"><h3>'+d.t+'</h3><div class="mut">'+d.d+' Resolva em '+tm(x.exp-G.t)+'.</div><div class="chips">'+d.o.map((o,i)=>btn('ev',x.id+':'+i,o.l,o.c&&G.money<o.c,'sm'+(i?'':' pri'))).join('')+'</div></div>'}).join(''):'<span class="mut">As linhas estão operando sem ocorrências.</span>';
  $('vis').innerHTML=G.visit?'<div class="ord"><h3>Visita da '+G.visit.cl+'</h3><div class="mut">Chega em '+tm(G.visit.t-G.t)+' · preparo '+G.visit.prep+'/3 · pontuação prevista <b class="num">'+Math.round(visitScore().total)+'</b></div>'+btn('prep',0,'Preparar a visita · R$ 18.000',G.visit.prep>=3||G.money<600,'sm pri')+'</div>':'<span class="mut">Nenhuma visita agendada.</span>'+(G.vlast?'<div class="mut">Última visita: '+G.vlast+'</div>':'');
- if(G.tab==='pes')$('pane-pes').innerHTML=pesPane();else if(G.tab==='nfb')$('pane-nfb').innerHTML=nfbPane()}
+ if(G.tab==='prod')$('pane-prod').innerHTML=prodPane();if(G.tab==='pes')$('pane-pes').innerHTML=pesPane();else if(G.tab==='nfb')$('pane-nfb').innerHTML=nfbPane()}
 
 function drawZone(i,t){if(i<8)return drawZone0(i,t);const[ox,oy]=ZP[i];rect(ox,oy,280,260,C.panel,C.line);rect(ox,oy,280,30,C.panel2);txt((i+1)+' · '+ZN[i].toUpperCase(),ox+12,oy+20,13,C.fg);
  if(i===8){G.mnt.forEach((s,q)=>station('mnt',s,ox+14+(q%3)*84,oy+44+Math.floor(q/3)*58,t));
